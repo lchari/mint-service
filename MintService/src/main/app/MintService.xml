@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:https="http://www.mulesoft.org/schema/mule/https" xmlns:context="http://www.springframework.org/schema/context" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:mulexml="http://www.mulesoft.org/schema/mule/xml" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.4.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/xml http://www.mulesoft.org/schema/mule/xml/current/mule-xml.xsd
+http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/https http://www.mulesoft.org/schema/mule/https/current/mule-https.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+    <data-mapper:config name="tx_identifier_obj_xml_grf" transformationGraphPath="tx_identifier_obj_xml.grf" doc:name="DataMapper"/>
+    <context:property-placeholder location="${mule.env}.properties"/>
+    <choice-exception-strategy name="Choice_Exception_Strategy">
+        <catch-exception-strategy   doc:name="MintBackEndError" enableNotifications="false" when="message.inboundProperties['http.status'] ==400">
+            <set-payload value="Not Found (no identifer of the given type could be created for the given entity)" doc:name="Set Payload"/>
+            <logger message="#[payload]" level="ERROR" doc:name="Logger"/>
+            <http:response-builder status="404" contentType="text/plain" doc:name="HTTP Response Builder"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy when="!accept.matches(&quot;application/(xml|json)&quot;)" doc:name="Catch_Exception_Strategy">
+            <set-payload value="Invalid Accept parameter in HTTP header Or bad request" doc:name="Set Payload"/>
+            <http:response-builder status="400" contentType="text/plain" doc:name="HTTP Response Builder"/>
+        </catch-exception-strategy>
+        <catch-exception-strategy when="! method.equals(&quot;post&quot;)" doc:name="Catch Exception Strategy">
+            <set-payload value="Unsupported Method" doc:name="Set Payload"/>
+            <http:response-builder status="405" contentType="text/plain" doc:name="HTTP Response Builder">
+                <http:cache-control noCache="true"/>
+            </http:response-builder>
+        </catch-exception-strategy>
+        <catch-exception-strategy doc:name="Catch Exception Strategy_500">
+            <set-payload value="Internal Server Error" doc:name="Set Payload"/>
+            <http:response-builder status="500" contentType="text/plain" doc:name="HTTP Response Builder"/>
+        </catch-exception-strategy>
+    </choice-exception-strategy>
+    <configuration defaultExceptionStrategy-ref="Choice_Exception_Strategy" doc:name="Configuration"/>
+    <flow name="MintService_Main" doc:name="MintService_Main" processingStrategy="synchronous">
+        <http:inbound-endpoint exchange-pattern="request-response" host="localhost" port="18081" path="mint" doc:name="HTTP">
+        <!-- <message-properties-transformer>
+    			<add-message-property key="Content-Type" value="#[message.inboundProperties['Accept']]" />
+ 		 </message-properties-transformer> -->
+  		</http:inbound-endpoint>
+        <logger message="#[message]" level="INFO" doc:name="Logger"/>
+        <set-variable variableName="method" value="#[message.inboundProperties['http.method'].toLowerCase()]" doc:name="GetMethod"/>
+        <set-variable variableName="accept" value="#[message.inboundProperties['Accept'].toLowerCase()]" doc:name="GetRequestAccept"/>
+        <expression-component doc:name="Validate Method"><![CDATA[if(! (method.matches("post")) ){
+	throw new org.mule.api.MessagingException("Unsupported Method");
+}]]></expression-component>
+        <expression-component doc:name="Validate Accept"><![CDATA[if(! (accept.matches("application/(xml|json)")) ){
+	throw new org.mule.api.MessagingException("Accept incorrect");
+}]]></expression-component>
+        <or-filter doc:name="Accept-Or-Filter">
+            <expression-filter expression="#[accept.equalsIgnoreCase(&quot;application/xml&quot;) || accept.equalsIgnoreCase(&quot;application/json&quot;)]"/>
+            <expression-filter expression="accept==&quot;application/json&quot; || accept==&quot;application/xml&quot;"/>
+        </or-filter>
+        <set-variable variableName="publishercode" value="#[message.inboundProperties['http.relative.path'].toUpperCase().split('/')[1]]" doc:name="GetPublisherCode"/>
+        <set-variable variableName="identifiertype" value="#[message.inboundProperties['http.relative.path'].toUpperCase().split('/')[3]]" doc:name="GetIdentifierType"/>
+        <choice doc:name="Choice">
+            <when expression="identifiertype.equalsIgnoreCase(&quot;isbn&quot;)">
+                <flow-ref name="ISBN_Flow" doc:name="ISBN_Flow_Ref"/>
+            </when>
+            <when expression="identifiertype.equalsIgnoreCase(&quot;gtin&quot;)">
+                <flow-ref name="GTIN_Flow" doc:name="GTIN_Flow_Ref"/>
+            </when>
+        </choice>
+        <choice doc:name="Choice" tracking:enable-default-events="true">
+            <when expression="accept.equalsIgnoreCase(&quot;application/xml&quot;)">
+                <flow-ref name="ObjectToXML" doc:name="Xml_Flow_ref"/>
+            </when>
+            <otherwise>
+                <json:object-to-json-transformer doc:name="Object to JSON"/>
+            </otherwise>
+        </choice>
+        <http:response-builder status="201" contentType="#[accept]" doc:name="HTTP Response Builder">
+            <http:cache-control noCache="true"/>
+        </http:response-builder>
+        <!-- <http:outbound-endpoint exchange-pattern="request-response" host="mint.dev.west.ora.com" port="80" method="POST" contentType="application/x-www-form-urlencoded" doc:name="HTTP" path="products"/> -->
+    </flow>
+    <sub-flow name="GTIN_Flow" doc:name="GTIN_Flow">
+        <set-variable variableName="address" value="?scheme=urn:epc:id:gtin:&amp;company=http://purl.oreilly.com/publishers/#[publishercode]" doc:name="Set Address with GTIN parameter"/>
+        <flow-ref name="Invoke_Mint_Legacy" doc:name="Invoke_Mint_Legacy_Flow_Ref"/>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <expression-component doc:name="Expression"><![CDATA[import com.oreilly.api.mint.Identifier;
+
+payload = new Identifier("GTIN",payload.split(':')[4],publishercode);
+]]></expression-component>
+    </sub-flow>
+    <sub-flow name="ISBN_Flow" doc:name="ISBN_Flow">
+        <set-variable variableName="address" value="?scheme=urn:isbn:&amp;company=http://purl.oreilly.com/publishers/#[publishercode]" doc:name="Set Address with ISBN parameters"/>
+        <flow-ref name="Invoke_Mint_Legacy" doc:name="Invoke_Mint_Legacy_Flow_Ref"/>
+        <logger message="I ran this" level="INFO" doc:name="Logger"/>
+        <object-to-string-transformer doc:name="Object to String"/>
+        <expression-component doc:name="Expression"><![CDATA[import com.oreilly.api.mint.Identifier;
+
+payload = new Identifier("ISBN",payload.split(':')[2],publishercode);
+]]></expression-component>
+    </sub-flow>
+    <sub-flow name="Invoke_Mint_Legacy" doc:name="Invoke_Mint_Legacy">
+    <message-properties-transformer overwrite="true" doc:name="Message Properties">
+   		 <add-message-property key="http.disable.status.code.exception.check" value="false"/>
+	</message-properties-transformer>
+        <http:outbound-endpoint exchange-pattern="request-response" method="POST" address="http://${mint.username}:${mint.password}@${mint.host}/products#[address]" contentType="application/x-www-form-urlencoded" doc:name="HTTP">
+            <!-- <properties>
+                    <spring:entry key="user" value="${mint.username}"/>
+                    <spring:entry key="password" value="${mint.password}"/>
+                </properties>-->
+        </http:outbound-endpoint>
+        <logger message="#[exception]" level="INFO" doc:name="Logger"/>
+        <message-filter throwOnUnaccepted="true" doc:name="Message">
+            <message-property-filter pattern="http.status =201" caseSensitive="true" scope="inbound"/>
+        </message-filter>
+        <logger message="#[message.inboundProperties['http.status']]" level="INFO" doc:name="Logger"/>
+    </sub-flow>
+    <sub-flow name="ObjectToXML" doc:name="ObjectToXML">
+        <data-mapper:transform config-ref="tx_identifier_obj_xml_grf" doc:name="DataMapper"/>
+ 
+    </sub-flow>
+</mule>

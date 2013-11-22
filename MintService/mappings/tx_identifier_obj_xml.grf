@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?><Graph author="Lakshmana Chari" created="Tue Sep 17 16:42:17 PDT 2013" guiVersion="3.4.0.P" id="1379538330885" licenseCode="Unlicensed" licenseType="Unknown" modified="Tue Sep 17 16:42:17 PDT 2013" modifiedBy="Lakshmana Chari" name="tx_identifier_obj_xml_grf" revision="1.0" showComponentDetails="false">
+<Global>
+<Metadata __index="0" __referenceCounter="1" __sourcePath="{http://mint.api.oreilly.com/Identifier=ns0}/ns0:identifier" _dataStructure="OBJECT" _id="__id" _type="Output" id="98aedde3-ea88-4b8e-9044-719235f83a2d">
+<Record fieldDelimiter="|" name="identifier" recordDelimiter="\n\\|\r\n\\|\r" type="delimited">
+<Field __artificialType="_id" __systemManaged="true" name="__id" type="string"/>
+<Field __index="0" __sourcePath="{http://mint.api.oreilly.com/Identifier=ns0}/ns0:identifier/ns0:type" containerType="SINGLE" label="type" name="type" type="string"/>
+<Field __index="1" __sourcePath="{http://mint.api.oreilly.com/Identifier=ns0}/ns0:identifier/ns0:value" containerType="SINGLE" label="value" name="value" type="string"/>
+<Field __index="2" __sourcePath="{http://mint.api.oreilly.com/Identifier=ns0}/ns0:identifier/ns0:entity" containerType="SINGLE" label="entity" name="entity" type="string"/>
+</Record>
+</Metadata>
+<Metadata __index="0" __referenceCounter="1" __sourcePath="{}/object" _dataStructure="OBJECT" _id="__id" _type="Input" id="1df44b2d-f58d-45d4-b258-f3452c25f4cb">
+<Record fieldDelimiter="|" name="Identifier" recordDelimiter="\n\\|\r\n\\|\r" type="delimited">
+<Field __artificialType="_id" __systemManaged="true" name="__id" type="string"/>
+<Field __index="0" __sourcePath="{}/object/entity" containerType="SINGLE" label="entity" name="entity" type="string"/>
+<Field __index="1" __sourcePath="{}/object/type" containerType="SINGLE" label="type" name="type" type="string"/>
+<Field __index="2" __sourcePath="{}/object/value" containerType="SINGLE" label="value" name="value" type="string"/>
+</Record>
+</Metadata>
+<Dictionary>
+<Entry id="DictionaryEntry0" input="true" name="inputPayload" output="false" type="object"/>
+<Entry id="DictionaryEntry1" input="false" name="outputPayload" output="true" type="object"/>
+</Dictionary>
+</Global>
+<Phase number="0">
+<Node enabled="enabled" fileURL="dict:inputPayload" guiName="Pojo READER" guiX="20" guiY="20" id="BEAN_READER0" type="BEAN_READER">
+<attr name="mapping"><![CDATA[<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<Context outPort="0" sequenceField="__id" xpath=".">
+  <Mapping cloverField="entity" trim="true" xpath="entity"/>
+  <Mapping cloverField="type" trim="true" xpath="type"/>
+  <Mapping cloverField="value" trim="true" xpath="value"/>
+</Context>
+]]></attr>
+<attr name="_data_format"><![CDATA[JAVA]]></attr>
+<attr name="schema"><![CDATA[<?xml version="1.0" encoding="UTF-8"?><schema-object>
+  <typed-object-ref type-ref="com.oreilly.api.mint.Identifier"/>
+  <typed-object type="java.lang.String"/>
+  <typed-object type="com.oreilly.api.mint.Identifier">
+    <typed-object-ref name="entity" type-ref="java.lang.String"/>
+    <typed-object-ref name="type" type-ref="java.lang.String"/>
+    <typed-object-ref name="value" type-ref="java.lang.String"/>
+  </typed-object>
+</schema-object>
+]]></attr>
+</Node>
+<Node charset="UTF-8" enabled="enabled" fileURL="dict:outputPayload" guiName="XML WRITER" guiX="900" guiY="20" id="EXT_XML_WRITER0" type="EXT_XML_WRITER" xmlSchemaURL=".\src\main\resources\Identifier.xsd">
+<attr name="mapping"><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<clover:element clover:name="ns0:identifier" xmlns:clover="http://www.cloveretl.com/ns/xmlmapping" xmlns:ns0="http://mint.api.oreilly.com/Identifier" clover:inPort="0">
+  <clover:element clover:name="ns0:type">$0.type</clover:element>
+  <clover:element clover:name="ns0:value">$0.value</clover:element>
+  <clover:element clover:name="ns0:entity">$0.entity</clover:element>
+</clover:element>]]></attr>
+<attr name="_data_format"><![CDATA[XML]]></attr>
+<attr name="__rootGlobalElementName"><![CDATA[{http://mint.api.oreilly.com/Identifier}identifier]]></attr>
+</Node>
+<Node enabled="enabled" guiName="Foreach 'object' -&gt; 'ns0:identifier'" guiX="460" guiY="20" id="FOREACH_OBJECT_NS0_IDENTIFIER" transformClass="com.mulesoft.datamapper.transform.MelRecordTransform" type="REFORMAT">
+<attr name="melScript"><![CDATA[//MEL
+//START -> DO NOT REMOVE
+output.__id = input.__id;
+//END -> DO NOT REMOVE
+output.entity = input.entity;
+output.type = input.type;
+output.value = input.value;
+]]></attr>
+</Node>
+<Edge debugMode="true" fromNode="BEAN_READER0:0" guiBendpoints="" id="Edge0" inPort="Port 0 (in)" metadata="1df44b2d-f58d-45d4-b258-f3452c25f4cb" outPort="Port 0 (out)" toNode="FOREACH_OBJECT_NS0_IDENTIFIER:0"/>
+<Edge debugMode="true" fromNode="FOREACH_OBJECT_NS0_IDENTIFIER:0" guiBendpoints="" id="Edge1" inPort="Port 0 (in)" metadata="98aedde3-ea88-4b8e-9044-719235f83a2d" outPort="Port 0 (out)" toNode="EXT_XML_WRITER0:0"/>
+</Phase>
+</Graph>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema targetNamespace="http://mint.api.oreilly.com/Identifier" elementFormDefault="qualified" xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://mint.api.oreilly.com/Identifier">
+
+    <complexType name="Identifier">
+    	<sequence>
+    		<element name="type" type="string"></element>
+    		<element name="value" type="string"></element>
+    		<element name="entity" type="string"></element>
+    	</sequence>
+    </complexType>
+
+    <element name="identifier" type="tns:Identifier"></element>
+
+    <complexType name="Identifiers">
+    	<sequence>
+    		<element name="identifier" type="tns:Identifier" maxOccurs="unbounded" minOccurs="0"></element>
+    	</sequence>
+    </complexType>
+
+    <element name="identifers" type="tns:Identifiers"></element>
+</schema>
